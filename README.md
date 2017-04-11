@@ -11,8 +11,8 @@ TensorFlow / TensorLayer implementation of [Deep Convolutional Generative Advers
 ## Prerequisites
 
 - Python 2.7 or Python 3.3+
-- [TensorFlow==0.10.0 or higher](https://www.tensorflow.org/)
-- [TensorLayer==1.2.6 or higher](https://github.com/zsdonghao/tensorlayer) (already in this repo)
+- [TensorFlow==1.0+](https://www.tensorflow.org/)
+- [TensorLayer==1.4+](https://github.com/zsdonghao/tensorlayer)
 
 
 ## Usage
@@ -25,4 +25,6 @@ To train a model with downloaded dataset:
 
     $ python main.py
 
+## Result
 
+![alt tag](result.png)
