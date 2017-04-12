@@ -2,6 +2,8 @@
 
 TensorFlow / TensorLayer implementation of [Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434) which is a stabilize Generative Adversarial Networks.
 
+Looking for Text to Image Synthesis ? [click here](https://github.com/zsdonghao/text-to-image)
+
 ![alt tag](img/DCGAN.png)
 
 * [Brandon Amos](http://bamos.github.io/) wrote an excellent [blog post](http://bamos.github.io/2016/08/09/deep-completion/) and [image completion code](https://github.com/bamos/dcgan-completion.tensorflow) based on this repo.
