@@ -30,7 +30,7 @@ flags.DEFINE_integer("image_size", 500, "The size of image to use (will be cente
 flags.DEFINE_integer("output_size", 64, "The size of the output images to produce [64]")
 flags.DEFINE_integer("sample_size", 64, "The number of sample images [64]")
 flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
-flags.DEFINE_integer("sample_step", 50, "The interval of generating sample. [500]")
+flags.DEFINE_integer("sample_step", 2, "The interval of generating sample. [500]")
 flags.DEFINE_integer("save_step", 500, "The interval of saveing checkpoints. [500]")
 flags.DEFINE_string("dataset", "loam", "The name of dataset [celebA, mnist, loam, lsun]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
@@ -39,6 +39,18 @@ flags.DEFINE_boolean("is_train", False, "True for training, False for testing [F
 flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 FLAGS = flags.FLAGS
+
+def variable_summaries(var):
+    """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+    with tf.name_scope('summaries'):
+        mean = tf.reduce_mean(var)
+        tf.summary.scalar('mean', mean)
+        with tf.name_scope('stddev'):
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+            tf.summary.scalar('stddev', stddev)
+            tf.summary.scalar('max', tf.reduce_max(var))
+            tf.summary.scalar('min', tf.reduce_min(var))
+            tf.summary.histogram('histogram', var)
 
 def main(_):
     pp.pprint(flags.FLAGS.__flags)
@@ -50,43 +62,56 @@ def main(_):
 
     z_dim = 100
 
-    with tf.device("/gpu:0"):
-        ##========================= DEFINE MODEL ===========================##
-        z = tf.placeholder(tf.float32, [FLAGS.batch_size, z_dim], name='z_noise')
-        real_images =  tf.placeholder(tf.float32, [FLAGS.batch_size, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
+    ##========================= DEFINE MODEL ===========================##
+    z = tf.placeholder(tf.float32, [FLAGS.batch_size, z_dim], name='z_noise')
+    real_images =  tf.placeholder(tf.float32, [FLAGS.batch_size, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
+    
+    # z --> generator for training
+    net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
+    # generated fake images --> discriminator
+    net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False)
+    # real images --> discriminator
+    net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True)
+    # sample_z --> generator for evaluation, set is_train to False
+    # so that BatchNormLayer behave differently
+    net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)
 
-        # z --> generator for training
-        net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
-        # generated fake images --> discriminator
-        net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False)
-        # real images --> discriminator
-        net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True)
-        # sample_z --> generator for evaluation, set is_train to False
-        # so that BatchNormLayer behave differently
-        net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)
-
-        ##========================= DEFINE TRAIN OPS =======================##
-        # cost for updating discriminator and generator
-        # discriminator: real images are labelled as 1
+    with tf.name_scope('fake_image'):
+        fake_image = tf.reshape(net_g2.outputs, [-1, 64, 64, 3])
+        tf.summary.image('fake', fake_image, 64)
+    
+    ##========================= DEFINE TRAIN OPS =======================##
+    # cost for updating discriminator and generator
+    # discriminator: real images are labelled as 1
+    with tf.name_scope('discriminator'):
         d_loss_real = tl.cost.sigmoid_cross_entropy(d2_logits, tf.ones_like(d2_logits), name='dreal')
+        tf.summary.scalar('d_loss_real', d_loss_real)
         # discriminator: images from generator (fake) are labelled as 0
         d_loss_fake = tl.cost.sigmoid_cross_entropy(d_logits, tf.zeros_like(d_logits), name='dfake')
+        tf.summary.scalar('d_loss_fake', d_loss_fake)
         d_loss = d_loss_real + d_loss_fake
+        tf.summary.scalar('d_loss', d_loss)
         # generator: try to make the the fake images look real (1)
         g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
-
+        tf.summary.scalar('g_loss', g_loss)
+        
+    with tf.name_scope('generator'):
         g_vars = tl.layers.get_variables_with_name('generator', True, True)
+        #variable_summaries(g_vars)
+
+    with tf.name_scope('discriminator'):
         d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
+        #variable_summaries(d_vars)
 
-        net_g.print_params(False)
-        print("---------------")
-        net_d.print_params(False)
-
-        # optimizers for updating discriminator and generator
-        d_optim = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1) \
-                          .minimize(d_loss, var_list=d_vars)
-        g_optim = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1) \
-                          .minimize(g_loss, var_list=g_vars)
+    net_g.print_params(False)
+    print("---------------")
+    net_d.print_params(False)
+    
+    # optimizers for updating discriminator and generator
+    d_optim = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1) \
+                      .minimize(d_loss, var_list=d_vars)
+    g_optim = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1) \
+                      .minimize(g_loss, var_list=g_vars)
 
     # Limit GPU usage
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
@@ -104,8 +129,13 @@ def main(_):
     net_d_name = os.path.join(save_dir, 'net_d.npz')
 
     data_files = glob(os.path.join("./data", FLAGS.dataset, "*.jpg"))
-        # sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
+    # sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
     sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
+
+    # Merge all the summaries and write them out to /tmp/tensorflow/loam/ (by default)
+    merged = tf.summary.merge_all()
+    logger = tf.summary.FileWriter('/tmp/tensorflow/loam/', sess.graph)
+    tf.global_variables_initializer().run()
 
     ##========================= TRAIN MODELS ================================##
     iter_counter = 0
@@ -147,14 +177,15 @@ def main(_):
             print iter_counter
             if np.mod(iter_counter, FLAGS.sample_step) == 0:
                 # generate and visualize generated images
-                img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
+                summary, img, errD, errG = sess.run([merged, net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
+                logger.add_summary(summary, iter_counter)
                 '''
                 img255 = (np.array(img) + 1) / 2 * 255
                 tl.visualize.images2d(images=img255, second=0, saveable=True,
                                 name='./{}/train_{:02d}_{:04d}'.format(FLAGS.sample_dir, epoch, idx), dtype=None, fig_idx=2838)
                 '''
-                save_images(img, [8, 8],
-                            './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
+                #save_images(img, [8, 8],
+                #            './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
                 print("[Sample] d_loss: %.8f, g_loss: %.8f" % (errD, errG))
                 sys.stdout.flush()
 
@@ -177,7 +208,7 @@ def main(_):
                 tl.files.save_npz(net_g.all_params, name=net_g_iter_name, sess=sess)
                 tl.files.save_npz(net_d.all_params, name=net_d_iter_name, sess=sess)
                 print("[*] Saving checkpoints SUCCESS!")
-
+    logger.close()
 
 if __name__ == '__main__':
     tf.app.run()
