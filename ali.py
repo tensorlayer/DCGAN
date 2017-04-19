@@ -57,29 +57,34 @@ def main(_):
 
     if not os.path.exists(FLAGS.checkpoint_dir):
         os.makedirs(FLAGS.checkpoint_dir)
-    if not os.path.exists(FLAGS.sample_dir):
-        os.makedirs(FLAGS.sample_dir)
+        if not os.path.exists(FLAGS.sample_dir):
+            os.makedirs(FLAGS.sample_dir)
 
     z_dim = 100
 
     ##========================= DEFINE MODEL ===========================##
     z = tf.placeholder(tf.float32, [FLAGS.batch_size, z_dim], name='z_noise')
     real_images =  tf.placeholder(tf.float32, [FLAGS.batch_size, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
-    
+
+    ##===FOR Train===##
     # z --> generator for training
     net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
-    # generated fake images --> discriminator
-    net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False)
-    # real images --> discriminator
-    net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True)
+    # X --> inverse generator for real image
+    net_inv_g, inv_g_logits = inverse_generator_simplified_api(real_images, is_train=True, reuse=False)
+
+    # (hat_X, z) --> discriminator
+    net_d, d_logits = discriminator_ali_api(net_g.outputs, z, is_train=True, reuse=False)
+    # (X, hat_z) --> discriminator
+    net_d2, d2_logits = discriminator_ali_api(real_images, net_inv_g.outputs, is_train=True, reuse=True)
+
+    ##===FOR Eval===##
     # sample_z --> generator for evaluation, set is_train to False
     # so that BatchNormLayer behave differently
     net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)
-
     with tf.name_scope('fake_image'):
         fake_image = tf.reshape(net_g2.outputs, [-1, 64, 64, 3])
         tf.summary.image('fake', fake_image, 64)
-    
+        
     ##========================= DEFINE TRAIN OPS =======================##
     # cost for updating discriminator and generator
     # discriminator: real images are labelled as 1
@@ -97,8 +102,8 @@ def main(_):
         tf.summary.scalar('d_loss', d_loss)
         # generator: try to make the the fake images look real (1)
         g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
+        tf.summary.scalar('', tf.reduce_mean())
         tf.summary.scalar('g_loss', g_loss)
-
 
         """ Least Square Loss """
         #d_loss = 0.5 * (tf.reduce_mean((d2_logits - 1)**2) + tf.reduce_mean((d_logits)**2))
@@ -106,7 +111,7 @@ def main(_):
         ## generator: try to make the the fake images look real (1)
         #g_loss = 0.5 * tf.reduce_mean((d_logits - 1)**2)
         #tf.summary.scalar('g_loss', g_loss)
-    
+        
 
         """ Total Variation """
         # D_loss = -(tf.reduce_mean(0.5 * tf.nn.tanh(D_real)) -
@@ -198,7 +203,7 @@ def main(_):
             # more image augmentation functions in http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html
             batch = [get_image(batch_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)
-                # batch_z = np.random.uniform(low=-1, high=1, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
+            # batch_z = np.random.uniform(low=-1, high=1, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
             batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
             start_time = time.time()
             # updates the discriminator
@@ -206,10 +211,10 @@ def main(_):
             # updates the generator, run generator twice to make sure that d_loss does not go to zero (difference from paper)
             for _ in range(2):
                 errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
-            print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-                    % (epoch, FLAGS.epoch, idx, batch_idxs,
-                        time.time() - start_time, errD, errG))
-            sys.stdout.flush()
+                print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                      % (epoch, FLAGS.epoch, idx, batch_idxs,
+                         time.time() - start_time, errD, errG))
+                sys.stdout.flush()
 
             iter_counter += 1
             print iter_counter
@@ -235,18 +240,18 @@ def main(_):
                 save_dir = os.path.join(FLAGS.checkpoint_dir, model_dir)
                 if not os.path.exists(save_dir):
                     os.makedirs(save_dir)
-                # the latest version location
-                net_g_name = os.path.join(save_dir, 'net_g.npz')
-                net_d_name = os.path.join(save_dir, 'net_d.npz')
-                # this version is for future re-check and visualization analysis
-                net_g_iter_name = os.path.join(save_dir, 'net_g_%d.npz' % iter_counter)
-                net_d_iter_name = os.path.join(save_dir, 'net_d_%d.npz' % iter_counter)
-                tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
-                tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
-                tl.files.save_npz(net_g.all_params, name=net_g_iter_name, sess=sess)
-                tl.files.save_npz(net_d.all_params, name=net_d_iter_name, sess=sess)
-                print("[*] Saving checkpoints SUCCESS!")
-    logger.close()
+                    # the latest version location
+                    net_g_name = os.path.join(save_dir, 'net_g.npz')
+                    net_d_name = os.path.join(save_dir, 'net_d.npz')
+                    # this version is for future re-check and visualization analysis
+                    net_g_iter_name = os.path.join(save_dir, 'net_g_%d.npz' % iter_counter)
+                    net_d_iter_name = os.path.join(save_dir, 'net_d_%d.npz' % iter_counter)
+                    tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
+                    tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
+                    tl.files.save_npz(net_g.all_params, name=net_g_iter_name, sess=sess)
+                    tl.files.save_npz(net_d.all_params, name=net_d_iter_name, sess=sess)
+                    print("[*] Saving checkpoints SUCCESS!")
+                    logger.close()
 
 if __name__ == '__main__':
     tf.app.run()

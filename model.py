@@ -7,8 +7,6 @@ from tensorlayer.layers import *
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-
-
 def generator_simplified_api(inputs, is_train=True, reuse=False):
     image_size = 64
     s2, s4, s8, s16 = int(image_size/2), int(image_size/4), int(image_size/8), int(image_size/16)
