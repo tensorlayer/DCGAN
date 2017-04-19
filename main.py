@@ -26,13 +26,14 @@ flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]"
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 64, "The number of batch images [64]")
-flags.DEFINE_integer("image_size", 500, "The size of image to use (will be center cropped) [108]")
+flags.DEFINE_integer("image_size", 28, "The size of image to use (will be center cropped) [108]")
+#flags.DEFINE_integer("image_size", 500, "The size of image to use (will be center cropped) [108]")
 flags.DEFINE_integer("output_size", 64, "The size of the output images to produce [64]")
 flags.DEFINE_integer("sample_size", 64, "The number of sample images [64]")
 flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
 flags.DEFINE_integer("sample_step", 2, "The interval of generating sample. [500]")
 flags.DEFINE_integer("save_step", 500, "The interval of saveing checkpoints. [500]")
-flags.DEFINE_string("dataset", "loam", "The name of dataset [celebA, mnist, loam, lsun]")
+flags.DEFINE_string("dataset", "mnist", "The name of dataset [celebA, mnist, loam, lsun]")
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
@@ -170,9 +171,9 @@ def main(_):
     # sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
     sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
 
-    # Merge all the summaries and write them out to /tmp/tensorflow/loam/ (by default)
+    # Merge all the summaries and write them out to /tmp/tensorflow/dcgan/ (by default)
     merged = tf.summary.merge_all()
-    logger = tf.summary.FileWriter('/tmp/tensorflow/loam/', sess.graph)
+    logger = tf.summary.FileWriter('/tmp/tensorflow/dcgan/', sess.graph)
     tf.global_variables_initializer().run()
 
     ##========================= TRAIN MODELS ================================##
