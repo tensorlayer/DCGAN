@@ -30,22 +30,25 @@ def transform(image, npx=64, is_crop=True, resize_w=64):
 def inverse_transform(images):
     return (images+1.)/2.
 
-def imread(path, is_grayscale = False):
+def imread(path, dataset, is_grayscale = False):
     if (is_grayscale):
         return scipy.misc.imread(path, flatten = True).astype(np.float)
     else:
         img = scipy.misc.imread(path).astype(np.float)
-        out = np.zeros([img.shape[0], img.shape[0], 3])
-        out[:,:,0] = img
-        out[:,:,1] = img
-        out[:,:,2] = img
-        return out
+        if dataset:
+            out = np.zeros([img.shape[0], img.shape[0], 3])
+            out[:,:,0] = img
+            out[:,:,1] = img
+            out[:,:,2] = img
+            return out
+        else:
+            return img
 
 def imsave(images, size, path):
     return scipy.misc.imsave(path, merge(images, size))
 
-def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale = False):
-    return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
+def get_image(image_path, image_size, dataset, is_crop=True, resize_w=64, is_grayscale = False):
+    return transform(imread(image_path, dataset, is_grayscale), image_size, is_crop, resize_w)
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)

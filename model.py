@@ -49,7 +49,7 @@ def generator_simplified_api(inputs, is_train=True, reuse=False):
     return net_h4, logits
 
 
-def discriminator_simplified_api(inputs, is_train=True, reuse=False):
+def discriminator_simplified_api(inputs, is_train=True, reuse=False, use_sigmoid=True):
     df_dim = 64 # Dimension of discrim filters in first conv layer. [64]
     c_dim = FLAGS.c_dim # n_color 3
     batch_size = FLAGS.batch_size # 64
@@ -83,5 +83,6 @@ def discriminator_simplified_api(inputs, is_train=True, reuse=False):
         net_h4 = DenseLayer(net_h4, n_units=1, act=tf.identity,
                 W_init = w_init, name='d/h4/lin_sigmoid')
         logits = net_h4.outputs
-        net_h4.outputs = tf.nn.sigmoid(net_h4.outputs)
+        if use_sigmoid:
+            net_h4.outputs = tf.nn.sigmoid(net_h4.outputs)
     return net_h4, logits
