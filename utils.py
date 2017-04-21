@@ -2,6 +2,20 @@ from random import shuffle
 import scipy.misc
 import numpy as np
 
+'''
+Parameters for Conv1d
+net : TensorLayer layer.
+n_filter : number of filter.
+filter_size : an int.
+stride : an int.
+act : None or activation function.
+
+Note: basicly Conv1x1 is equal to Fully Connected Networks
+for conv1x1, with (Nx1x1) as input and (Mx1x1) as output, for each output fileter(1x1)
+the parameters is (Nx1x1), same as Fully Connected Networks
+'''
+
+
 def center_crop(x, crop_h, crop_w=None, resize_w=64):
     if crop_w is None:
         crop_w = crop_h

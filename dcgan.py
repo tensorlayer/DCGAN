@@ -70,9 +70,9 @@ def main(_):
     # z --> generator for training
     net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
     # generated fake images --> discriminator
-    net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False)
+    net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False, use_sigmoid=False) 
     # real images --> discriminator
-    net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True)
+    net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True, use_sigmoid=False)
     # sample_z --> generator for evaluation, set is_train to False
     # so that BatchNormLayer behave differently
     net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)

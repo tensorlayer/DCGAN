@@ -21,11 +21,12 @@ Usage : see README.md
 """
 
 flags = tf.app.flags
-flags.DEFINE_integer("epoch", 10000, "Epoch to train [25]")
+flags.DEFINE_integer("epoch", 1000, "Epoch to train [25]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
 flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
 flags.DEFINE_integer("train_size", np.inf, "The size of train images [np.inf]")
 flags.DEFINE_integer("batch_size", 64, "The number of batch images [64]")
+#flags.DEFINE_integer("image_size", 28, "The size of image to use (will be center cropped) [108]")
 flags.DEFINE_integer("image_size", 500, "The size of image to use (will be center cropped) [108]")
 flags.DEFINE_integer("output_size", 64, "The size of the output images to produce [64]")
 flags.DEFINE_integer("sample_size", 64, "The number of sample images [64]")
@@ -39,6 +40,9 @@ flags.DEFINE_boolean("is_train", False, "True for training, False for testing [F
 flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
 flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 FLAGS = flags.FLAGS
+
+def log(x):
+    return tf.log(x + 1e-8)
 
 def variable_summaries(var):
     """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -60,29 +64,24 @@ def main(_):
         if not os.path.exists(FLAGS.sample_dir):
             os.makedirs(FLAGS.sample_dir)
 
-    z_dim = 100
+    z_dim = 512
 
     ##========================= DEFINE MODEL ===========================##
     z = tf.placeholder(tf.float32, [FLAGS.batch_size, z_dim], name='z_noise')
     real_images =  tf.placeholder(tf.float32, [FLAGS.batch_size, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
+    
+    # Generator: z --> hat_X
+    net_g, g_logits = decoder_simplified_api(z, is_train=True, reuse=False)
+    # Encoder:   X --> hat_z
+    net_e, e_logits = encoder_simplified_api(real_images, is_train=True, reuse=False)
 
-    ##===FOR Train===##
-    # z --> generator for training
-    net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
-    # X --> inverse generator for real image
-    net_inv_g, inv_g_logits = inverse_generator_simplified_api(real_images, is_train=True, reuse=False)
-
-    # (hat_X, z) --> discriminator
+    # Discriminator for (hat_X, z)
     net_d, d_logits = discriminator_ali_api(net_g.outputs, z, is_train=True, reuse=False)
-    # (X, hat_z) --> discriminator
-    net_d2, d2_logits = discriminator_ali_api(real_images, net_inv_g.outputs, is_train=True, reuse=True)
+    # Discriminator for (X, hat_z)
+    net_d2, d2_logits = discriminator_ali_api(real_images, net_e.outputs, is_train=True, reuse=True)
 
-    ##===FOR Eval===##
-    # sample_z --> generator for evaluation, set is_train to False
-    # so that BatchNormLayer behave differently
-    net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)
     with tf.name_scope('fake_image'):
-        fake_image = tf.reshape(net_g2.outputs, [-1, 64, 64, 3])
+        fake_image = tf.reshape(net_g.outputs, [-1, 64, 64, 3])
         tf.summary.image('fake', fake_image, 64)
         
     ##========================= DEFINE TRAIN OPS =======================##
@@ -92,6 +91,7 @@ def main(_):
     # Apply Different Loss
     with tf.name_scope('discriminator'):
 
+        '''
         # Original Loss
         d_loss_real = tl.cost.sigmoid_cross_entropy(d2_logits, tf.ones_like(d2_logits), name='dreal')
         tf.summary.scalar('d_loss_real', d_loss_real)
@@ -102,16 +102,33 @@ def main(_):
         tf.summary.scalar('d_loss', d_loss)
         # generator: try to make the the fake images look real (1)
         g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
-        tf.summary.scalar('', tf.reduce_mean())
+        tf.summary.scalar('g_loss', g_loss)
+        '''
+
+        """ Least Square Loss """
+        d_loss = -tf.reduce_mean(log(d2_logits) + log(1-d_logits))
+        g_loss = -tf.reduce_mean(log(d_logits) + log(1-d2_logits))
+        tf.summary.scalar('d_loss', d_loss)
         tf.summary.scalar('g_loss', g_loss)
 
         """ Least Square Loss """
         #d_loss = 0.5 * (tf.reduce_mean((d2_logits - 1)**2) + tf.reduce_mean((d_logits)**2))
         #tf.summary.scalar('d_loss', d_loss)
-        ## generator: try to make the the fake images look real (1)
+        # generator: try to make the the fake images look real (1)
         #g_loss = 0.5 * tf.reduce_mean((d_logits - 1)**2)
         #tf.summary.scalar('g_loss', g_loss)
         
+
+        """ W-GAN """
+        #d_loss = tf.reduce_mean(d2_logits) - tf.reduce_mean(d_logits)
+        #g_loss = -tf.reduce_mean()
+        # D_solver = (tf.train.RMSPropOptimizer(learning_rate=1e-4)
+        #             .minimize(-D_loss, var_list=theta_D))
+        #G_solver = (tf.train.RMSPropOptimizer(learning_rate=1e-4)
+        #            .minimize(G_loss, var_list=theta_G))        
+        #clip_D = [p.assign(tf.clip_by_value(p, -0.01, 0.01)) for p in theta_D]
+
+
 
         """ Total Variation """
         # D_loss = -(tf.reduce_mean(0.5 * tf.nn.tanh(D_real)) -
@@ -139,11 +156,13 @@ def main(_):
 
     
     with tf.name_scope('generator'):
-        g_vars = tl.layers.get_variables_with_name('generator', True, True)
+        g_vars = tl.layers.get_variables_with_name('ENCODER', True, True)
+        g2_vars = tl.layers.get_variables_with_name('DECODER', True, True)
+        g_vars.extend(g2_vars)
         #variable_summaries(g_vars)
 
     with tf.name_scope('discriminator'):
-        d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
+        d_vars = tl.layers.get_variables_with_name('DISCRIMINATOR', True, True)
         #variable_summaries(d_vars)
 
     net_g.print_params(False)
@@ -175,11 +194,12 @@ def main(_):
     # sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
     sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
 
-    # Merge all the summaries and write them out to /tmp/tensorflow/loam/ (by default)
     merged = tf.summary.merge_all()
-    logger = tf.summary.FileWriter('/tmp/tensorflow/loam/', sess.graph)
+    logger = tf.summary.FileWriter('/tmp/tensorflow/ali/', sess.graph)
     tf.global_variables_initializer().run()
 
+    # dataset: 0 for loam, 1 for mnist
+    dataset = 0
     ##========================= TRAIN MODELS ================================##
     iter_counter = 0
     for epoch in range(FLAGS.epoch):
@@ -189,7 +209,7 @@ def main(_):
 
         ## update sample files based on shuffled data
         sample_files = data_files[0:FLAGS.sample_size]
-        sample = [get_image(sample_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for sample_file in sample_files]
+        sample = [get_image(sample_file, FLAGS.image_size, dataset, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for sample_file in sample_files]
         sample_images = np.array(sample).astype(np.float32)
         print("[*] Sample images updated!")
         print sample_images.shape
@@ -198,16 +218,27 @@ def main(_):
         batch_idxs = min(len(data_files), FLAGS.train_size) // FLAGS.batch_size
 
         for idx in xrange(0, batch_idxs):
+            ### Get datas ###
             batch_files = data_files[idx*FLAGS.batch_size:(idx+1)*FLAGS.batch_size]
             ## get real images
             # more image augmentation functions in http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html
-            batch = [get_image(batch_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for batch_file in batch_files]
+            batch = [get_image(batch_file, FLAGS.image_size, dataset, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)
             # batch_z = np.random.uniform(low=-1, high=1, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
             batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
             start_time = time.time()
+
+            ### Update Nets ###
             # updates the discriminator
-            errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images })
+            feed_dict={z: batch_z, real_images: batch_images }
+            errD, _ = sess.run([d_loss, d_optim], feed_dict=feed_dict)
+            errG, _ = sess.run([g_loss, g_optim], feed_dict=feed_dict)
+            print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
+                  % (epoch, FLAGS.epoch, idx, batch_idxs,
+                     time.time() - start_time, errD, errG))
+            sys.stdout.flush()
+
+            '''
             # updates the generator, run generator twice to make sure that d_loss does not go to zero (difference from paper)
             for _ in range(2):
                 errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
@@ -215,20 +246,13 @@ def main(_):
                       % (epoch, FLAGS.epoch, idx, batch_idxs,
                          time.time() - start_time, errD, errG))
                 sys.stdout.flush()
-
+            '''
             iter_counter += 1
             print iter_counter
             if np.mod(iter_counter, FLAGS.sample_step) == 0:
                 # generate and visualize generated images
-                summary, img, errD, errG = sess.run([merged, net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
+                summary, img, errD, errG = sess.run([merged, net_g.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
                 logger.add_summary(summary, iter_counter)
-                '''
-                img255 = (np.array(img) + 1) / 2 * 255
-                tl.visualize.images2d(images=img255, second=0, saveable=True,
-                                name='./{}/train_{:02d}_{:04d}'.format(FLAGS.sample_dir, epoch, idx), dtype=None, fig_idx=2838)
-                '''
-                #save_images(img, [8, 8],
-                #            './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
                 print("[Sample] d_loss: %.8f, g_loss: %.8f" % (errD, errG))
                 sys.stdout.flush()
 
