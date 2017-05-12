@@ -2,6 +2,20 @@ from random import shuffle
 import scipy.misc
 import numpy as np
 
+'''
+Parameters for Conv1d
+net : TensorLayer layer.
+n_filter : number of filter.
+filter_size : an int.
+stride : an int.
+act : None or activation function.
+
+Note: basicly Conv1x1 is equal to Fully Connected Networks
+for conv1x1, with (Nx1x1) as input and (Mx1x1) as output, for each output fileter(1x1)
+the parameters is (Nx1x1), same as Fully Connected Networks
+'''
+
+
 def center_crop(x, crop_h, crop_w=None, resize_w=64):
     if crop_w is None:
         crop_w = crop_h
@@ -30,17 +44,25 @@ def transform(image, npx=64, is_crop=True, resize_w=64):
 def inverse_transform(images):
     return (images+1.)/2.
 
-def imread(path, is_grayscale = False):
+def imread(path, dataset, is_grayscale = False):
     if (is_grayscale):
         return scipy.misc.imread(path, flatten = True).astype(np.float)
     else:
-        return scipy.misc.imread(path).astype(np.float)
+        img = scipy.misc.imread(path).astype(np.float)
+        if dataset:
+            out = np.zeros([img.shape[0], img.shape[0], 3])
+            out[:,:,0] = img
+            out[:,:,1] = img
+            out[:,:,2] = img
+            return out
+        else:
+            return img
 
 def imsave(images, size, path):
     return scipy.misc.imsave(path, merge(images, size))
 
-def get_image(image_path, image_size, is_crop=True, resize_w=64, is_grayscale = False):
-    return transform(imread(image_path, is_grayscale), image_size, is_crop, resize_w)
+def get_image(image_path, image_size, dataset, is_crop=True, resize_w=64, is_grayscale = False):
+    return transform(imread(image_path, dataset, is_grayscale), image_size, is_crop, resize_w)
 
 def save_images(images, size, image_path):
     return imsave(inverse_transform(images), size, image_path)
