@@ -7,7 +7,8 @@ Downloads the following:
 - MNIST dataset
 """
 from __future__ import print_function
-import os, sys, gzip, json, shutil, zipfile, argparse, subprocess
+import os, sys, gzip, json, shutil, zipfile, argparse, subprocess, requests
+from tqdm import tqdm
 from six.moves import urllib
 
 parser = argparse.ArgumentParser(description='Download dataset for DCGAN.')
