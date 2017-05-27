@@ -32,11 +32,11 @@ def cross_entropy(output, target, name=None):
     - About cross-entropy: `wiki <https://en.wikipedia.org/wiki/Cross_entropy>`_.\n
     - The code is borrowed from: `here <https://en.wikipedia.org/wiki/Cross_entropy>`_.
     """
-    # try: # old
-    #     return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, targets=target))
-    # except: # TF 1.0
-    #     assert name is not None, "Please give a unique name to tl.cost.cross_entropy for TF1.0+"
-    return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=target, logits=output, name=name))
+    try: # old
+        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=output, targets=target))
+    except: # TF 1.0
+        assert name is not None, "Please give a unique name to tl.cost.cross_entropy for TF1.0+"
+        return tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=target, logits=output, name=name))
 
 def sigmoid_cross_entropy(output, target, name=None):
     """It is a sigmoid cross-entropy operation, see ``tf.nn.sigmoid_cross_entropy_with_logits``.
@@ -72,8 +72,8 @@ def binary_cross_entropy(output, target, epsilon=1e-8, name='bce_loss'):
 #         output = ops.convert_to_tensor(output, name="preds")
 #         target = ops.convert_to_tensor(targets, name="target")
     with tf.name_scope(name):
-        return tf.reduce_mean(-(target * tf.log(output + epsilon) +
-                              (1. - target) * tf.log(1. - output + epsilon)))
+        return tf.reduce_mean(tf.reduce_sum(-(target * tf.log(output + epsilon) +
+                              (1. - target) * tf.log(1. - output + epsilon)), axis=1))
 
 
 def mean_squared_error(output, target, is_mean=False):
@@ -223,7 +223,7 @@ def cross_entropy_seq(logits, target_seqs, batch_size=None):#, batch_size=1, num
     >>> see PTB tutorial for more details
     >>> input_data = tf.placeholder(tf.int32, [batch_size, num_steps])
     >>> targets = tf.placeholder(tf.int32, [batch_size, num_steps])
-    >>> cost = tf.cost.cross_entropy_seq(network.outputs, targets)
+    >>> cost = tl.cost.cross_entropy_seq(network.outputs, targets)
     """
     try: # TF 1.0
         sequence_loss_by_example_fn = tf.contrib.legacy_seq2seq.sequence_loss_by_example

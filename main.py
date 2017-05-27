@@ -43,7 +43,6 @@ def main(_):
     tl.files.exists_or_mkdir(FLAGS.sample_dir)
 
     z_dim = 100
-
     with tf.device("/gpu:0"):
         ##========================= DEFINE MODEL ===========================##
         z = tf.placeholder(tf.float32, [FLAGS.batch_size, z_dim], name='z_noise')
@@ -94,15 +93,14 @@ def main(_):
     net_d_name = os.path.join(save_dir, 'net_d.npz')
 
     data_files = glob(os.path.join("./data", FLAGS.dataset, "*.jpg"))
-        # sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
-    sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
+
+    sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)# sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
 
     ##========================= TRAIN MODELS ================================##
     iter_counter = 0
     for epoch in range(FLAGS.epoch):
         ## shuffle data
         shuffle(data_files)
-        print("[*] Dataset shuffled!")
 
         ## update sample files based on shuffled data
         sample_files = data_files[0:FLAGS.sample_size]
@@ -119,8 +117,7 @@ def main(_):
             # more image augmentation functions in http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html
             batch = [get_image(batch_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for batch_file in batch_files]
             batch_images = np.array(batch).astype(np.float32)
-                # batch_z = np.random.uniform(low=-1, high=1, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
-            batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
+            batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)  # batch_z = np.random.uniform(low=-1, high=1, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
             start_time = time.time()
             # updates the discriminator
             errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images })
@@ -128,37 +125,20 @@ def main(_):
             for _ in range(2):
                 errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
             print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-                    % (epoch, FLAGS.epoch, idx, batch_idxs,
-                        time.time() - start_time, errD, errG))
-            sys.stdout.flush()
+                    % (epoch, FLAGS.epoch, idx, batch_idxs, time.time() - start_time, errD, errG))
 
             iter_counter += 1
             if np.mod(iter_counter, FLAGS.sample_step) == 0:
                 # generate and visualize generated images
                 img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
-                save_images(img, [8, 8],
-                            './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
+                tl.visualize.save_images(img, [8, 8], './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
                 print("[Sample] d_loss: %.8f, g_loss: %.8f" % (errD, errG))
-                sys.stdout.flush()
 
             if np.mod(iter_counter, FLAGS.save_step) == 0:
                 # save current network parameters
                 print("[*] Saving checkpoints...")
-                img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
-                model_dir = "%s_%s_%s" % (FLAGS.dataset, FLAGS.batch_size, FLAGS.output_size)
-                save_dir = os.path.join(FLAGS.checkpoint_dir, model_dir)
-                if not os.path.exists(save_dir):
-                    os.makedirs(save_dir)
-                # the latest version location
-                net_g_name = os.path.join(save_dir, 'net_g.npz')
-                net_d_name = os.path.join(save_dir, 'net_d.npz')
-                # # this version is for future re-check and visualization analysis
-                # net_g_iter_name = os.path.join(save_dir, 'net_g_%d.npz' % iter_counter)
-                # net_d_iter_name = os.path.join(save_dir, 'net_d_%d.npz' % iter_counter)
-                # tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
-                # tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
-                # tl.files.save_npz(net_g.all_params, name=net_g_iter_name, sess=sess)
-                # tl.files.save_npz(net_d.all_params, name=net_d_iter_name, sess=sess)
+                tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
+                tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
                 print("[*] Saving checkpoints SUCCESS!")
 
 if __name__ == '__main__':
