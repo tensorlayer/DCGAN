@@ -1,9 +1,6 @@
-import os
-import sys
+import os, sys, pprint, time
 import scipy.misc
-import pprint
 import numpy as np
-import time
 import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import *
@@ -19,7 +16,6 @@ TensorLayer implementation of DCGAN to generate face image.
 
 Usage : see README.md
 """
-
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
@@ -171,7 +167,6 @@ def main(_):
                 tl.files.save_npz(net_g.all_params, name=net_g_iter_name, sess=sess)
                 tl.files.save_npz(net_d.all_params, name=net_d_iter_name, sess=sess)
                 print("[*] Saving checkpoints SUCCESS!")
-
 
 if __name__ == '__main__':
     tf.app.run()

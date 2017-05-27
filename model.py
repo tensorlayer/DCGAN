@@ -3,11 +3,8 @@ import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import *
 
-
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-
-
 
 def generator_simplified_api(inputs, is_train=True, reuse=False):
     image_size = 64

@@ -6,16 +6,8 @@ Downloads the following:
 - LSUN dataset
 - MNIST dataset
 """
-
 from __future__ import print_function
-import os
-import sys
-import gzip
-import json
-import shutil
-import zipfile
-import argparse
-import subprocess
+import os, sys, gzip, json, shutil, zipfile, argparse, subprocess
 from six.moves import urllib
 
 parser = argparse.ArgumentParser(description='Download dataset for DCGAN.')
@@ -49,7 +41,7 @@ def download(url, dirpath):
     f.close()
     return filepath
 
-def download_file_from_google_drive(id, destination):    
+def download_file_from_google_drive(id, destination):
     URL = "https://docs.google.com/uc?export=download"
     session = requests.Session()
 
