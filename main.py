@@ -1,5 +1,4 @@
-import os, sys, pprint, time
-import scipy.misc
+import os, pprint, time
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -111,7 +110,7 @@ def main(_):
         ## load image data
         batch_idxs = min(len(data_files), FLAGS.train_size) // FLAGS.batch_size
 
-        for idx in xrange(0, batch_idxs):
+        for idx in range(0, batch_idxs):
             batch_files = data_files[idx*FLAGS.batch_size:(idx+1)*FLAGS.batch_size]
             ## get real images
             # more image augmentation functions in http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html
