@@ -10,3 +10,7 @@ dist
 docs/_build
 tensorlayer.egg-info
 tensorlayer/__pacache__
+
+.vscode/*
+data/*
+samples/*
