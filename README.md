@@ -13,8 +13,8 @@ Looking for Text to Image Synthesis ? [click here](https://github.com/zsdonghao/
 ## Prerequisites
 
 - Python 2.7 or Python 3.3+
-- [TensorFlow==1.0+](https://www.tensorflow.org/)
-- [TensorLayer==1.4+](https://github.com/zsdonghao/tensorlayer)
+- [TensorFlow==1.10.0+](https://www.tensorflow.org/)
+- [TensorLayer==1.10.1+](https://github.com/tensorlayer/tensorlayer)
 
 
 ## Usage
