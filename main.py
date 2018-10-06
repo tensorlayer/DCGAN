@@ -70,7 +70,7 @@ def main(_):
 
         # Input real and generated fake images into discriminator for training
         net_d, d_logits = discriminator(net_g.outputs, is_train=True, reuse=False)
-        net_d2, d2_logits = discriminator(real_images, is_train=True, reuse=True)
+        _, d2_logits = discriminator(real_images, is_train=True, reuse=True)
 
         # Input noise into generator for evaluation
         # set is_train to False so that BatchNormLayer behave differently
