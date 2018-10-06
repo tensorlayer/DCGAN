@@ -21,12 +21,11 @@ import tensorflow as tf
 import tensorlayer as tl
 
 from glob import glob
-from random import shuffle
 
-from model import generator_simplified_api, discriminator_simplified_api
 from utils import get_image
+from model import generator, discriminator
 
-# Defile TF Flags
+# Define TF Flags
 flags = tf.app.flags
 flags.DEFINE_integer("epoch", 25, "Epoch to train [25]")
 flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
@@ -67,15 +66,15 @@ def main(_):
         real_images =  tf.placeholder(tf.float32, [FLAGS.batch_size, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
 
         # Input noise into generator for training
-        net_g, g_logits = generator_simplified_api(z, is_train=True, reuse=False)
+        net_g = generator(z, is_train=True, reuse=False)
 
         # Input real and generated fake images into discriminator for training
-        net_d, d_logits = discriminator_simplified_api(net_g.outputs, is_train=True, reuse=False)
-        net_d2, d2_logits = discriminator_simplified_api(real_images, is_train=True, reuse=True)
+        net_d, d_logits = discriminator(net_g.outputs, is_train=True, reuse=False)
+        _, d2_logits = discriminator(real_images, is_train=True, reuse=True)
 
         # Input noise into generator for evaluation
         # set is_train to False so that BatchNormLayer behave differently
-        net_g2, g2_logits = generator_simplified_api(z, is_train=False, reuse=True)
+        net_g2 = generator(z, is_train=False, reuse=True)
 
         """ Define Training Operations """
         # cost for updating discriminator and generator
@@ -111,51 +110,59 @@ def main(_):
     net_g_name = os.path.join(save_dir, 'net_g.npz')
     net_d_name = os.path.join(save_dir, 'net_d.npz')
 
-    data_files = glob(os.path.join("./data", FLAGS.dataset, "*.jpg"))
+    data_files = np.array(glob(os.path.join("./data", FLAGS.dataset, "*.jpg")))
+    num_files = len(data_files)
+    shuffle = True
 
-    sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)# sample_seed = np.random.uniform(low=-1, high=1, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
+    # Mini-batch generator
+    def iterate_minibatches():
+        if shuffle:
+            indices = np.random.permutation(num_files)
+        for start_idx in range(0, num_files - FLAGS.batch_size + 1, FLAGS.batch_size):
+            if shuffle:
+                excerpt = indices[start_idx: start_idx + FLAGS.batch_size]
+            else:
+                excerpt = slice(start_idx, start_idx + FLAGS.batch_size)
+            # Get real images (more image augmentation functions at [http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html])
+            yield np.array([get_image(file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) 
+                            for file in data_files[excerpt]]).astype(np.float32)
+
+    batch_steps = min(num_files, FLAGS.train_size) // FLAGS.batch_size
+
+    # sample noise
+    sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
 
     """ Training models """
     iter_counter = 0
     for epoch in range(FLAGS.epoch):
 
-        # Shuffle data
-        shuffle(data_files)
-
-        # Update sample files based on shuffled data
-        sample_files = data_files[0:FLAGS.sample_size]
-        sample = [get_image(sample_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for sample_file in sample_files]
-        sample_images = np.array(sample).astype(np.float32)
+        sample_images = next(iterate_minibatches())
         print("[*] Sample images updated!")
+        
+        steps = 0
+        for batch_images in iterate_minibatches():
 
-        # Load image data
-        batch_idxs = min(len(data_files), FLAGS.train_size) // FLAGS.batch_size
-
-        for idx in range(0, batch_idxs):
-            batch_files = data_files[idx*FLAGS.batch_size:(idx + 1) * FLAGS.batch_size]
-
-            # Get real images (more image augmentation functions at [http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html])
-            batch = [get_image(batch_file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) for batch_file in batch_files]
-            batch_images = np.array(batch).astype(np.float32)
             batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, z_dim)).astype(np.float32)
             start_time = time.time()
             
             # Updates the Discriminator(D)
-            errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images })
+            errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images})
             
             # Updates the Generator(G)
             # run generator twice to make sure that d_loss does not go to zero (different from paper)
             for _ in range(2):
                 errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
+            
+            end_time = time.time() - start_time
             print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-                    % (epoch, FLAGS.epoch, idx, batch_idxs, time.time() - start_time, errD, errG))
+                    % (epoch, FLAGS.epoch, steps, batch_steps, end_time, errD, errG))
 
             iter_counter += 1
             if np.mod(iter_counter, FLAGS.sample_step) == 0:
                 # Generate images
-                img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z : sample_seed, real_images: sample_images})
+                img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z: sample_seed, real_images: sample_images})
                 # Visualize generated images
-                tl.visualize.save_images(img, [8, 8], './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, idx))
+                tl.visualize.save_images(img, [8, 8], './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, steps))
                 print("[Sample] d_loss: %.8f, g_loss: %.8f" % (errD, errG))
 
             if np.mod(iter_counter, FLAGS.save_step) == 0:
@@ -164,6 +171,8 @@ def main(_):
                 tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
                 tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
                 print("[*] Saving checkpoints SUCCESS!")
+                
+            steps += 1
     
     sess.close()
 
