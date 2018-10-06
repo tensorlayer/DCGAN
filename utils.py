@@ -1,5 +1,3 @@
-from random import shuffle
-
 import scipy.misc
 import imageio as io
 import numpy as np
