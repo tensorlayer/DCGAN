@@ -27,22 +27,22 @@ def generator(inputs, is_train=True, reuse=False):
         net_h0 = DenseLayer(net_in, n_units=(gf_dim * 8 * s16 * s16), W_init=w_init,
                 act = tf.identity, name='g/h0/lin')
         net_h0 = ReshapeLayer(net_h0, shape=[-1, s16, s16, gf_dim*8], name='g/h0/reshape')
-        net_h0 = BatchNormLayer(net_h0, act=tf.nn.relu, is_train=is_train,
+        net_h0 = BatchNormLayer(net_h0, decay=0.9, act=tf.nn.relu, is_train=is_train,
                 gamma_init=gamma_init, name='g/h0/batch_norm')
 
         net_h1 = DeConv2d(net_h0, gf_dim * 4, (5, 5), strides=(2, 2),
                 padding='SAME', act=None, W_init=w_init, name='g/h1/decon2d')
-        net_h1 = BatchNormLayer(net_h1, act=tf.nn.relu, is_train=is_train,
+        net_h1 = BatchNormLayer(net_h1, decay=0.9, act=tf.nn.relu, is_train=is_train,
                 gamma_init=gamma_init, name='g/h1/batch_norm')
 
         net_h2 = DeConv2d(net_h1, gf_dim * 2, (5, 5), strides=(2, 2),
                 padding='SAME', act=None, W_init=w_init, name='g/h2/decon2d')
-        net_h2 = BatchNormLayer(net_h2, act=tf.nn.relu, is_train=is_train,
+        net_h2 = BatchNormLayer(net_h2, decay=0.9, act=tf.nn.relu, is_train=is_train,
                 gamma_init=gamma_init, name='g/h2/batch_norm')
 
         net_h3 = DeConv2d(net_h2, gf_dim, (5, 5), strides=(2, 2),
                 padding='SAME', act=None, W_init=w_init, name='g/h3/decon2d')
-        net_h3 = BatchNormLayer(net_h3, act=tf.nn.relu, is_train=is_train,
+        net_h3 = BatchNormLayer(net_h3, decay=0.9, act=tf.nn.relu, is_train=is_train,
                 gamma_init=gamma_init, name='g/h3/batch_norm')
 
         net_h4 = DeConv2d(net_h3, c_dim, (5, 5), strides=(2, 2),
@@ -63,17 +63,17 @@ def discriminator(inputs, is_train=True, reuse=False):
 
         net_h1 = Conv2d(net_h0, df_dim*2, (5, 5), (2, 2), act=None,
                 padding='SAME', W_init=w_init, name='d/h1/conv2d')
-        net_h1 = BatchNormLayer(net_h1, act=lrelu,
+        net_h1 = BatchNormLayer(net_h1, decay=0.9, act=lrelu,
                 is_train=is_train, gamma_init=gamma_init, name='d/h1/batch_norm')
 
         net_h2 = Conv2d(net_h1, df_dim*4, (5, 5), (2, 2), act=None,
                 padding='SAME', W_init=w_init, name='d/h2/conv2d')
-        net_h2 = BatchNormLayer(net_h2, act=lrelu,
+        net_h2 = BatchNormLayer(net_h2, decay=0.9, act=lrelu,
                 is_train=is_train, gamma_init=gamma_init, name='d/h2/batch_norm')
 
         net_h3 = Conv2d(net_h2, df_dim*8, (5, 5), (2, 2), act=None,
                 padding='SAME', W_init=w_init, name='d/h3/conv2d')
-        net_h3 = BatchNormLayer(net_h3, act=lrelu,
+        net_h3 = BatchNormLayer(net_h3, decay=0.9, act=lrelu,
                 is_train=is_train, gamma_init=gamma_init, name='d/h3/batch_norm')
 
         net_h4 = FlattenLayer(net_h3, name='d/h4/flatten')
