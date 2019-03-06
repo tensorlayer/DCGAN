@@ -14,9 +14,6 @@ FLAGS = flags.FLAGS
 num_tiles = int(np.sqrt(FLAGS.sample_size))
 
 def train():
-    tl.files.exists_or_mkdir(FLAGS.checkpoint_dir) # save model
-    tl.files.exists_or_mkdir(FLAGS.sample_dir) # save generated image
-
     images, images_path = get_celebA(FLAGS.output_size, FLAGS.n_epoch, FLAGS.batch_size)
     G = get_generator([None, FLAGS.z_dim])
     D = get_discriminator([None, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim])

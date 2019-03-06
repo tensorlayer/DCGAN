@@ -25,6 +25,8 @@ flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image s
 flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
 flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
 assert np.sqrt(flags.FLAGS.sample_size) % 1 == 0., 'Flag `sample_size` needs to be a perfect square'
+tl.files.exists_or_mkdir(flags.FLAGS.checkpoint_dir) # save model
+tl.files.exists_or_mkdir(flags.FLAGS.sample_dir) # save generated image
 
 def get_celebA(output_size, n_epoch, batch_size):
     # dataset API and augmentation

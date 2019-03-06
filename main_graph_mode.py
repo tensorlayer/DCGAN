@@ -9,17 +9,10 @@ from glob import glob
 from utils import get_celebA, flags
 from model import get_generator, get_discriminator
 
-## enable debug logging
-tl.logging.set_verbosity(tl.logging.DEBUG)
-tl.logging.set_verbosity(tl.logging.DEBUG)
-
 FLAGS = flags.FLAGS
 num_tiles = int(np.sqrt(FLAGS.sample_size))
 
 def train():
-    tl.files.exists_or_mkdir(FLAGS.checkpoint_dir) # save model
-    tl.files.exists_or_mkdir(FLAGS.sample_dir) # save generated image
-
     z = tf.contrib.distributions.Normal(0., 1.).sample([FLAGS.batch_size, FLAGS.z_dim]) #tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
     ds, images_path = get_celebA(FLAGS.output_size, FLAGS.n_epoch, FLAGS.batch_size)
     iterator = ds.make_one_shot_iterator()
