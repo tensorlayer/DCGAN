@@ -27,9 +27,7 @@ def get_celebA(output_size, n_epoch, batch_size):
     ds = ds.map(_map_fn, num_parallel_calls=4)
     ds = ds.batch(batch_size)
     ds = ds.prefetch(buffer_size=2)
-    iterator = ds.make_one_shot_iterator()
-    one_element = iterator.get_next()
-    return one_element, images_path
+    return ds, images_path
     # for batch_images in train_ds:
     #     print(batch_images.shape)
     # value = ds.make_one_shot_iterator().get_next()
