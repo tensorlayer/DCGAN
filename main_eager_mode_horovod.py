@@ -45,13 +45,6 @@ def train():
     n_step_epoch = int(len(images_path) // FLAGS.batch_size)
 
     for step, batch_images in enumerate(images):
-        # Horovod: broadcast initial variable states from rank 0 to all other processes.
-        # This is necessary to ensure consistent initialization of all workers when
-        # training is started with random weights or restored from a checkpoint.
-        if step == 0:
-            hvd.broadcast_variables(G.weights, root_rank=0)
-            hvd.broadcast_variables(D.weights, root_rank=0)
-
         step_time = time.time()
         with tf.GradientTape(persistent=True) as tape:
             z = tf.contrib.distributions.Normal(0., 1.).sample([FLAGS.batch_size, FLAGS.z_dim]) #tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
@@ -66,15 +59,22 @@ def train():
             # generator: try to make the the fake images look real (1)
             g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
 
-            # Horovod: add Horovod Distributed GradientTape.
-            tape = hvd.DistributedGradientTape(tape)
-            #
-            grad = tape.gradient(d_loss, D.weights)
-            d_optimizer.apply_gradients(zip(grad, D.weights), global_step=tf.train.get_or_create_global_step())
-            grad = tape.gradient(g_loss, G.weights)
-            g_optimizer.apply_gradients(zip(grad, G.weights), global_step=tf.train.get_or_create_global_step())
+        # Horovod: broadcast initial variable states from rank 0 to all other processes.
+        # This is necessary to ensure consistent initialization of all workers when
+        # training is started with random weights or restored from a checkpoint.
+        if step == 0:
+            hvd.broadcast_variables(G.weights, root_rank=0)
+            hvd.broadcast_variables(D.weights, root_rank=0)
 
-        # Horovod: print looging only on worker 0
+        # Horovod: add Horovod Distributed GradientTape.
+        tape = hvd.DistributedGradientTape(tape)
+        #
+        grad = tape.gradient(d_loss, D.weights)
+        d_optimizer.apply_gradients(zip(grad, D.weights), global_step=tf.train.get_or_create_global_step())
+        grad = tape.gradient(g_loss, G.weights)
+        g_optimizer.apply_gradients(zip(grad, G.weights), global_step=tf.train.get_or_create_global_step())
+
+        # Horovod: print logging only on worker 0
         if hvd.rank() == 0
             print("Epoch: [{}/{}] [{}/{}] took: {:3f}, d_loss: {:5f}, g_loss: {:5f}".format(step//n_step_epoch, FLAGS.n_epoch, step, n_step_epoch, time.time()-step_time, d_loss, g_loss))
 
