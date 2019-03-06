@@ -24,10 +24,6 @@ def train():
     d_optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1)
     g_optimizer = tf.train.AdamOptimizer(FLAGS.learning_rate, beta1=FLAGS.beta1)
 
-    model_dir = "%s_%s_%s" % (FLAGS.dataset, FLAGS.batch_size, FLAGS.output_size)
-    save_dir = os.path.join(FLAGS.checkpoint_dir, model_dir)
-    tl.files.exists_or_mkdir(save_dir)
-
     n_step_epoch = int(len(images_path) // FLAGS.batch_size)
 
     for step, batch_images in enumerate(images):

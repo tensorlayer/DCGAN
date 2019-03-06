@@ -28,6 +28,10 @@ assert np.sqrt(flags.FLAGS.sample_size) % 1 == 0., 'Flag `sample_size` needs to 
 tl.files.exists_or_mkdir(flags.FLAGS.checkpoint_dir) # save model
 tl.files.exists_or_mkdir(flags.FLAGS.sample_dir) # save generated image
 
+# model_dir = "%s_%s_%s" % (FLAGS.dataset, FLAGS.batch_size, FLAGS.output_size)
+# save_dir = os.path.join(FLAGS.checkpoint_dir, model_dir)
+# tl.files.exists_or_mkdir(save_dir)
+
 def get_celebA(output_size, n_epoch, batch_size):
     # dataset API and augmentation
     images_path = tl.files.load_file_list(path='data', regx='.*.jpg', keep_prefix=True, printable=False)
