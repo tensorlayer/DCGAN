@@ -1,29 +1,13 @@
-""" TensorLayer implementation of Deep Convolutional Generative Adversarial Network (DCGAN).
-Using deep convolutional generative adversarial networks (DCGAN) 
-to generate face images from a noise distribution.
-References:
-    -Generative Adversarial Nets.
-    Goodfellow et al. arXiv: 1406.2661.
-    - Unsupervised Representation Learning with Deep Convolutional 
-    Generative Adversarial Networks. A Radford, L Metz, S Chintala. 
-    arXiv: 1511.06434.
-Links:
-    - [GAN Paper](https://arxiv.org/pdf/1406.2661.pdf)
-    - [DCGAN Paper](https://arxiv.org/abs/1511.06434)
-Usage:
-    - See README.md
+"""Graph mode
 """
-import os
-import time
 
+import os, time, multiprocessing
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
-
 from glob import glob
-
 from utils import get_image
-from model import generator, discriminator
+from model import get_generator, get_discriminator
 
 # Define TF Flags
 flags = tf.app.flags
@@ -43,7 +27,7 @@ flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the 
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
 flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
 flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
-flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
+# flags.DEFINE_boolean("visualize", False, "True for visualizing, False for nothing [False]")
 FLAGS = flags.FLAGS
 
 def main(_):
@@ -51,9 +35,9 @@ def main(_):
     num_tiles = int(np.sqrt(FLAGS.sample_size))
 
     # Print flags
-    for flag, _ in FLAGS.__flags.items():
-        print('"{}": {}'.format(flag, getattr(FLAGS, flag)))
-    print("--------------------")
+    # for flag, _ in FLAGS.__flags.items():
+    #     print('"{}": {}'.format(flag, getattr(FLAGS, flag)))
+    # print("--------------------")
 
     # Configure checkpoint/samples dir
     tl.files.exists_or_mkdir(FLAGS.checkpoint_dir)
@@ -68,16 +52,21 @@ def main(_):
         z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
         real_images =  tf.placeholder(tf.float32, [None, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim], name='real_images')
 
-        # Input noise into generator for training
-        net_g = generator(z, is_train=True, reuse=False)
+        G = get_generator([None, z_dim])#, is_train=True, reuse=False)
+        D = get_discriminator([None, FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim])
 
         # Input real and generated fake images into discriminator for training
-        net_d, d_logits = discriminator(net_g.outputs, is_train=True, reuse=False)
-        _, d2_logits = discriminator(real_images, is_train=True, reuse=True)
+        # net_d, d_logits = discriminator(net_g.outputs, is_train=True, reuse=False)
+        # _, d2_logits = discriminator(real_images, is_train=True, reuse=True)
+        G.train()
+        D.train()
+        d_logits = D(G(z))
+        d2_logits = D(real_images)
 
         # Input noise into generator for evaluation
         # set is_train to False so that BatchNormLayer behave differently
-        net_g2 = generator(z, is_train=False, reuse=True)
+        # net_g2 = generator(z, is_train=False, reuse=True)
+        # fake_im = G(z)
 
         """ Define Training Operations """
         # discriminator: real images are labelled as 1
@@ -112,6 +101,26 @@ def main(_):
     net_g_name = os.path.join(save_dir, 'net_g.npz')
     net_d_name = os.path.join(save_dir, 'net_d.npz')
 
+    # images = tl.vis.read_images(tl.files.load_file_list(path='data', regx='.*.jpg', printable=False), path='data', n_threads=32) # DH add
+    # dataset API and augmentation
+    def generator_train():
+        for image_path in zip(inputs, targets):
+            # yield _input.encode('utf-8'), _target.encode('utf-8')
+            yield image_path
+    def _map_fn_train(img_list):
+        image = tf.read_file(img_list)
+        image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
+        image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+        image = tf.image.central_crop(image)
+        image = tf.image.random_flip_left_right(image)
+        return image
+    train_ds = tf.data.Dataset.from_generator(generator_train, output_types=(tf.float32))
+    train_ds = train_ds.map(_map_fn_train, num_parallel_calls=multiprocessing.cpu_count())
+    # train_ds = train_ds.repeat(n_epoch)
+    train_ds = train_ds.shuffle(shuffle_buffer_size)
+    train_ds = train_ds.prefetch(buffer_size=4096)
+    train_ds = train_ds.batch(batch_size)
+
     data_files = np.array(glob(os.path.join("./data", FLAGS.dataset, "*.jpg")))
     num_files = len(data_files)
 
@@ -125,7 +134,7 @@ def main(_):
             else:
                 excerpt = slice(start_idx, start_idx + batch_size)
             # Get real images (more image augmentation functions at [http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html])
-            yield np.array([get_image(file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0) 
+            yield np.array([get_image(file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0)
                             for file in data_files[excerpt]]).astype(np.float32)
 
     batch_steps = min(num_files, FLAGS.train_size) // FLAGS.batch_size
@@ -139,21 +148,21 @@ def main(_):
 
         sample_images = next(iterate_minibatches(FLAGS.sample_size))
         print("[*] Sample images updated!")
-        
+
         steps = 0
         for batch_images in iterate_minibatches(FLAGS.batch_size):
 
             batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.batch_size, z_dim)).astype(np.float32)
             start_time = time.time()
-            
+
             # Updates the Discriminator(D)
             errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images})
-            
+
             # Updates the Generator(G)
             # run generator twice to make sure that d_loss does not go to zero (different from paper)
             for _ in range(2):
                 errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
-            
+
             end_time = time.time() - start_time
             print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
                     % (epoch, FLAGS.epoch, steps, batch_steps, end_time, errD, errG))
