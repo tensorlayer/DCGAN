@@ -6,34 +6,14 @@ import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
 from glob import glob
-from utils import get_celebA # get_image
+from utils import get_celebA, flags
 from model import get_generator, get_discriminator
 
 ## enable debug logging
 tl.logging.set_verbosity(tl.logging.DEBUG)
 tl.logging.set_verbosity(tl.logging.DEBUG)
 
-# Define TF Flags
-flags = tf.app.flags
-flags.DEFINE_integer("n_epoch", 25, "Epoch to train [25]")
-flags.DEFINE_integer("z_dim", 100, "Num of noise value]")
-flags.DEFINE_float("learning_rate", 0.0002, "Learning rate of for adam [0.0002]")
-flags.DEFINE_float("beta1", 0.5, "Momentum term of adam [0.5]")
-flags.DEFINE_float("train_size", np.inf, "The size of train images [np.inf]")
-flags.DEFINE_integer("batch_size", 64, "The number of batch images [64]")
-flags.DEFINE_integer("image_size", 108, "The size of image to use (will be center cropped) [108]")
-flags.DEFINE_integer("output_size", 64, "The size of the output images to produce [64]")
-flags.DEFINE_integer("sample_size", 64, "The number of sample images [64]")
-flags.DEFINE_integer("c_dim", 3, "Dimension of image color. [3]")
-flags.DEFINE_integer("sample_step", 500, "The interval of generating sample. [500]")
-flags.DEFINE_integer("save_step", 500, "The interval of saveing checkpoints. [500]")
-flags.DEFINE_string("dataset", "celebA", "The name of dataset [celebA, mnist, lsun]")
-flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
-flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
-flags.DEFINE_boolean("is_train", False, "True for training, False for testing [False]")
-flags.DEFINE_boolean("is_crop", True, "True for training, False for testing [False]")
 FLAGS = flags.FLAGS
-assert np.sqrt(FLAGS.sample_size) % 1 == 0., 'Flag `sample_size` needs to be a perfect square'
 num_tiles = int(np.sqrt(FLAGS.sample_size))
 
 def train():
@@ -86,7 +66,7 @@ def train():
         for step in range(n_step_epoch):
             step_time = time.time()
             _d_loss, _g_loss, _, _ = sess.run([d_loss, g_loss, d_optim, g_optim])
-            print("Epoch: [{}/{}] [{}/{}] took: {:3}, d_loss: {:5}, g_loss: {:5}".format(epoch, FLAGS.n_epoch, step, n_step_epoch, time.time()-step_time, _d_loss, _g_loss))
+            print("Epoch: [{}/{}] [{}/{}] took: {:3f}, d_loss: {:5f}, g_loss: {:5f}".format(epoch, FLAGS.n_epoch, step, n_step_epoch, time.time()-step_time, _d_loss, _g_loss))
             if np.mod(step, FLAGS.save_step) == 0:
                 G.save_weights('{}/G.npz'.format(FLAGS.checkpoint_dir), sess=sess, format='npz')
                 D.save_weights('{}/D.npz'.format(FLAGS.checkpoint_dir), sess=sess, format='npz')
