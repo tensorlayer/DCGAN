@@ -41,10 +41,11 @@ def train():
             # generator: try to make the the fake images look real (1)
             g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
 
-            grad = tape.gradient(d_loss, D.weights)
-            d_optimizer.apply_gradients(zip(grad, D.weights))
-            grad = tape.gradient(g_loss, G.weights)
-            g_optimizer.apply_gradients(zip(grad, G.weights))
+        grad = tape.gradient(g_loss, G.weights)
+        g_optimizer.apply_gradients(zip(grad, G.weights))
+        grad = tape.gradient(d_loss, D.weights)
+        d_optimizer.apply_gradients(zip(grad, D.weights))
+        del tape
 
         print("Epoch: [{}/{}] [{}/{}] took: {:3f}, d_loss: {:5f}, g_loss: {:5f}".format(step//n_step_epoch, FLAGS.n_epoch, step, n_step_epoch, time.time()-step_time, d_loss, g_loss))
         if np.mod(step, FLAGS.save_step) == 0:
