@@ -1,4 +1,6 @@
 """Graph mode, single GPU
+
+For TensorFlow 1.13
 """
 
 import os, time, multiprocessing
@@ -46,10 +48,6 @@ def train():
     sess.run(tf.global_variables_initializer())
 
     n_step_epoch = int(len(images_path) // FLAGS.batch_size)
-    # print(n_step_epoch)
-    # v = sess.run(images)
-    # print(v.shape, v.max(), v.min())
-    # tl.vis.save_images(v, [8, 8])
     for epoch in range(FLAGS.n_epoch):
         epoch_time = time.time()
         for step in range(n_step_epoch):
@@ -62,77 +60,7 @@ def train():
                 result = sess.run(fake_images)
                 tl.visualize.save_images(result, [num_tiles, num_tiles], '{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, step))
 
-    #
-    # ## old implementation
-    #
-    # data_files = np.array(glob(os.path.join("./data", FLAGS.dataset, "*.jpg")))
-    # num_files = len(data_files)
-    #
-    # # Mini-batch generator
-    # def iterate_minibatches(batch_size, shuffle=True):
-    #     if shuffle:
-    #         indices = np.random.permutation(num_files)
-    #     for start_idx in range(0, num_files - batch_size + 1, batch_size):
-    #         if shuffle:
-    #             excerpt = indices[start_idx: start_idx + batch_size]
-    #         else:
-    #             excerpt = slice(start_idx, start_idx + batch_size)
-    #         # Get real images (more image augmentation functions at [http://tensorlayer.readthedocs.io/en/latest/modules/prepro.html])
-    #         yield np.array([get_image(file, FLAGS.image_size, is_crop=FLAGS.is_crop, resize_w=FLAGS.output_size, is_grayscale = 0)
-    #                         for file in data_files[excerpt]]).astype(np.float32)
-    #
-    # batch_steps = min(num_files, FLAGS.train_size) // FLAGS.batch_size
-    #
-    # # sample noise
-    # sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.sample_size, FLAGS.z_dim)).astype(np.float32)
-    #
-    # """ Training models """
-    # iter_counter = 0
-    # for epoch in range(FLAGS.n_epoch):
-    #
-    #     sample_images = next(iterate_minibatches(FLAGS.sample_size))
-    #     print("[*] Sample images updated!")
-    #
-    #     steps = 0
-    #     for batch_images in iterate_minibatches(FLAGS.batch_size):
-    #
-    #         batch_z = np.random.normal(loc=0.0, scale=1.0, size=(FLAGS.batch_size, FLAGSz_dim)).astype(np.float32)
-    #         start_time = time.time()
-    #
-    #         # Updates the Discriminator(D)
-    #         errD, _ = sess.run([d_loss, d_optim], feed_dict={z: batch_z, real_images: batch_images})
-    #
-    #         # Updates the Generator(G)
-    #         # run generator twice to make sure that d_loss does not go to zero (different from paper)
-    #         for _ in range(2):
-    #             errG, _ = sess.run([g_loss, g_optim], feed_dict={z: batch_z})
-    #
-    #         end_time = time.time() - start_time
-    #         print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f" \
-    #                 % (epoch, FLAGS.n_epoch, steps, batch_steps, end_time, errD, errG))
-    #
-    #         iter_counter += 1
-    #         if np.mod(iter_counter, FLAGS.sample_step) == 0:
-    #             # Generate images
-    #             img, errD, errG = sess.run([net_g2.outputs, d_loss, g_loss], feed_dict={z: sample_seed, real_images: sample_images})
-    #             # Visualize generated images
-    #             tl.visualize.save_images(img, [num_tiles, num_tiles], './{}/train_{:02d}_{:04d}.png'.format(FLAGS.sample_dir, epoch, steps))
-    #             print("[Sample] d_loss: %.8f, g_loss: %.8f" % (errD, errG))
-    #
-    #         if np.mod(iter_counter, FLAGS.save_step) == 0:
-    #             # Save current network parameters
-    #             print("[*] Saving checkpoints...")
-    #             tl.files.save_npz(net_g.all_params, name=net_g_name, sess=sess)
-    #             tl.files.save_npz(net_d.all_params, name=net_d_name, sess=sess)
-    #             print("[*] Saving checkpoints SUCCESS!")
-    #
-    #         steps += 1
-
     sess.close()
 
 if __name__ == '__main__':
     train()
-    # try:
-    #     tf.app.run()
-    # except KeyboardInterrupt:
-    #     print('EXIT')

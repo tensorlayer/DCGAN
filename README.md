@@ -18,8 +18,8 @@ First, download the aligned face images from [google](https://drive.google.com/o
 
 Second, train the GAN:
 
-    $ python main_eager_mode.py   # single GPU
-    $ python main_graph_mode.py   # single GPU
+    $ python main_eager_mode.py   # single GPU for TF>=1.13
+    $ python main_graph_mode.py   # single GPU for TF<=1.13
     $ python main_eager_mode_horovod.py   # multiple GPU (TODO)
     $ python main_eager_mode_tlmagic.py   # multiple GPU (TODO)    
 

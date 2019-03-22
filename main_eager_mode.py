@@ -4,7 +4,7 @@
 import os, time, multiprocessing
 import numpy as np
 import tensorflow as tf
-tf.enable_eager_execution()
+tf.enable_eager_execution() # for TF 1.13
 import tensorlayer as tl
 from glob import glob
 from utils import get_celebA, flags # get_image
@@ -36,9 +36,9 @@ def train():
             d_loss_real = tl.cost.sigmoid_cross_entropy(d2_logits, tf.ones_like(d2_logits), name='dreal')
             # discriminator: images from generator (fake) are labelled as 0
             d_loss_fake = tl.cost.sigmoid_cross_entropy(d_logits, tf.zeros_like(d_logits), name='dfake')
-            # cost for updating discriminator
+            # combined loss for updating discriminator
             d_loss = d_loss_real + d_loss_fake
-            # generator: try to make the the fake images look real (1)
+            # generator: try to fool discriminator to output 1
             g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
 
         grad = tape.gradient(g_loss, G.weights)
@@ -56,7 +56,3 @@ def train():
 
 if __name__ == '__main__':
     train()
-    # try:
-    #     tf.app.run()
-    # except KeyboardInterrupt:
-    #     print('EXIT')

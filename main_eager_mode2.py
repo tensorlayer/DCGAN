@@ -1,4 +1,7 @@
 """Eager mode, single GPU
+
+
+TODO
 """
 
 import os, time, multiprocessing
