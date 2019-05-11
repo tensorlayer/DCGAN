@@ -2,13 +2,11 @@ import tensorflow as tf
 import tensorlayer as tl
 from tensorlayer.layers import Input, Dense, DeConv2d, Reshape, BatchNorm2d, Conv2d, Flatten, BatchNorm
 
-flags = tf.app.flags
-FLAGS = flags.FLAGS
-
 def get_generator(shape, gf_dim=64): # Dimension of gen filters in first conv layer. [64]
     image_size = 64
     s16 = image_size // 16
-    w_init = tf.glorot_normal_initializer()
+    # w_init = tf.glorot_normal_initializer()
+    w_init = tf.random_normal_initializer(stddev=0.02)
     gamma_init = tf.random_normal_initializer(1., 0.02)
 
     ni = Input(shape)
@@ -26,7 +24,8 @@ def get_generator(shape, gf_dim=64): # Dimension of gen filters in first conv la
     return tl.models.Model(inputs=ni, outputs=nn, name='generator')
 
 def get_discriminator(shape, df_dim=64): # Dimension of discrim filters in first conv layer. [64]
-    w_init = tf.glorot_normal_initializer()
+    # w_init = tf.glorot_normal_initializer()
+    w_init = tf.random_normal_initializer(stddev=0.02)
     gamma_init = tf.random_normal_initializer(1., 0.02)
     lrelu = lambda x : tf.nn.leaky_relu(x, 0.2)
 
