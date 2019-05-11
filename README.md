@@ -1,16 +1,21 @@
 # DCGAN in TensorLayer
 
-TensorLayer implementation of [Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434).
 
+This is the TensorLayer implementation of [Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434).
 Looking for Text to Image Synthesis ? [click here](https://github.com/zsdonghao/text-to-image)
 
 ![alt tag](img/DCGAN.png)
 
+
+- 🆕 🔥 2019 May: We just update this project to support TF2 and TL2. Enjoy!
+- 🆕 🔥 2019 May: This project is chosen as the default template of TL projects.
+
+
 ## Prerequisites
 
-- Python3
-- TensorFlow==1.13
-- TensorLayer (self-contained)
+- Python3.5 3.6
+- TensorFlow==2.0.0a0  `pip3 install tensorflow-gpu==2.0.0a0`
+- TensorLayer=2.0.0		`pip3 install tensorlayer==2.0.0`
 
 ## Usage
 
@@ -18,11 +23,8 @@ First, download the aligned face images from [google](https://drive.google.com/o
 
 Second, train the GAN:
 
-    $ python main_eager_mode.py   # single GPU for TF>=1.13
-    $ python main_graph_mode.py   # single GPU for TF<=1.13
-    $ python main_eager_mode_horovod.py   # multiple GPU (TODO)
-    $ python main_eager_mode_tlmagic.py   # multiple GPU (TODO)    
-
+    $ python train.py
+    
 ## Result on celebA
 
 
