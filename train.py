@@ -37,10 +37,10 @@ def train():
             # generator: try to fool discriminator to output 1
             g_loss = tl.cost.sigmoid_cross_entropy(d_logits, tf.ones_like(d_logits), name='gfake')
 
-        grad = tape.gradient(g_loss, G.weights)
-        g_optimizer.apply_gradients(zip(grad, G.weights))
-        grad = tape.gradient(d_loss, D.weights)
-        d_optimizer.apply_gradients(zip(grad, D.weights))
+        grad = tape.gradient(g_loss, G.trainable_weights)
+        g_optimizer.apply_gradients(zip(grad, G.trainable_weights))
+        grad = tape.gradient(d_loss, D.trainable_weights)
+        d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
         del tape
 
         print("Epoch: [{}/{}] [{}/{}] took: {:3f}, d_loss: {:5f}, g_loss: {:5f}".format(step//n_step_epoch, flags.n_epoch, step, n_step_epoch, time.time()-step_time, d_loss, g_loss))
