@@ -15,7 +15,7 @@ Looking for Text to Image Synthesis ? [click here](https://github.com/zsdonghao/
 
 - Python3.5 3.6
 - TensorFlow==2.0.0a0  `pip3 install tensorflow-gpu==2.0.0a0`
-- TensorLayer=2.0.0		`pip3 install tensorlayer==2.0.0`
+- TensorLayer=2.1.0		`pip3 install tensorlayer==2.1.0`
 
 ## Usage
 
