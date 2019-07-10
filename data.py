@@ -47,7 +47,7 @@ def get_celebA(output_size, n_epoch, batch_size):
     train_ds = tf.data.Dataset.from_generator(generator_train, output_types=tf.string)
     ds = train_ds.shuffle(buffer_size=4096)
     # ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
-    ds = ds.repeat(n_epoch)
+    # ds = ds.repeat(n_epoch)
     ds = ds.map(_map_fn, num_parallel_calls=4)
     ds = ds.batch(batch_size)
     ds = ds.prefetch(buffer_size=2)
