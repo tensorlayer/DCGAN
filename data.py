@@ -9,13 +9,13 @@ class FLAGS(object):
     def __init__(self):
         self.n_epoch = 25 # "Epoch to train [25]"
         self.z_dim = 100 # "Num of noise value]"
-        self.learning_rate = 0.0002 # "Learning rate of for adam [0.0002]")
+        self.lr = 0.0002 # "Learning rate of for adam [0.0002]")
         self.beta1 = 0.5 # "Momentum term of adam [0.5]")
         self.batch_size = 64 # "The number of batch images [64]")
         self.output_size = 64 # "The size of the output images to produce [64]")
         self.sample_size = 64 # "The number of sample images [64]")
         self.c_dim = 3 # "Number of image channels. [3]")
-        self.save_step = 500 # "The interval of saveing checkpoints. [500]")
+        self.save_every_epoch = 1 # "The interval of saveing checkpoints.")
         # self.dataset = "celebA" # "The name of dataset [celebA, mnist, lsun]")
         self.checkpoint_dir = "checkpoint" # "Directory name to save the checkpoints [checkpoint]")
         self.sample_dir = "samples" # "Directory name to save the image samples [samples]")
