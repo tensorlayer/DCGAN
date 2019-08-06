@@ -21,13 +21,15 @@ def train():
 
     n_step_epoch = int(len(images_path) // flags.batch_size)
     
+    # Z = tf.distributions.Normal(0., 1.)
+    
     for epoch in range(flags.n_epoch):
         for step, batch_images in enumerate(images):
             if batch_images.shape[0] != flags.batch_size: # if the remaining data in this epoch < batch_size
                 break
             step_time = time.time()
             with tf.GradientTape(persistent=True) as tape:
-                # z = tf.distributions.Normal(0., 1.).sample([flags.batch_size, flags.z_dim]) #tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
+                # z = Z.sample([flags.batch_size, flags.z_dim]) 
                 z = np.random.normal(loc=0.0, scale=1.0, size=[flags.batch_size, flags.z_dim]).astype(np.float32)
                 d_logits = D(G(z))
                 d2_logits = D(batch_images)
