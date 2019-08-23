@@ -48,7 +48,7 @@ def train():
             d_optimizer.apply_gradients(zip(grad, D.trainable_weights))
             del tape
 
-            print("Epoch: [{}/{}] [{}/{}] took: {:3f}, d_loss: {:5f}, g_loss: {:5f}".format(epoch, \
+            print("Epoch: [{}/{}] [{}/{}] took: {:.3f}, d_loss: {:.5f}, g_loss: {:.5f}".format(epoch, \
                   flags.n_epoch, step, n_step_epoch, time.time()-step_time, d_loss, g_loss))
         
         if np.mod(epoch, flags.save_every_epoch) == 0:
