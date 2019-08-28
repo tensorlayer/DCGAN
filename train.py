@@ -22,7 +22,6 @@ def train():
     n_step_epoch = int(len(images_path) // flags.batch_size)
     
     # Z = tf.distributions.Normal(0., 1.)
-    
     for epoch in range(flags.n_epoch):
         for step, batch_images in enumerate(images):
             if batch_images.shape[0] != flags.batch_size: # if the remaining data in this epoch < batch_size
