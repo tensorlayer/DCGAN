@@ -1,43 +1,68 @@
-import tensorflow as tf
-import tensorlayer as tl
-from tensorlayer.layers import Input, Dense, DeConv2d, Reshape, BatchNorm2d, Conv2d, Flatten
+import tensorlayerx as tlx
+from tensorlayerx.nn import Linear, ConvTranspose2d, Reshape, BatchNorm2d, Conv2d, Flatten, Module
 
-def get_generator(shape, gf_dim=64): # Dimension of gen filters in first conv layer. [64]
+class Generator(Module):
+    gf_dim = 64
     image_size = 64
     s16 = image_size // 16
-    # w_init = tf.glorot_normal_initializer()
-    w_init = tf.random_normal_initializer(stddev=0.02)
-    gamma_init = tf.random_normal_initializer(1., 0.02)
+    w_init = tlx.nn.initializers.random_normal(stddev=0.02)
+    gamma_init = tlx.nn.initializers.random_normal(1., 0.02)
 
-    ni = Input(shape)
-    nn = Dense(n_units=(gf_dim * 8 * s16 * s16), W_init=w_init, b_init=None)(ni)
-    nn = Reshape(shape=[-1, s16, s16, gf_dim*8])(nn)
-    nn = BatchNorm2d(decay=0.9, act=tf.nn.relu, gamma_init=gamma_init, name=None)(nn)
-    nn = DeConv2d(gf_dim * 4, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d( decay=0.9, act=tf.nn.relu, gamma_init=gamma_init)(nn)
-    nn = DeConv2d(gf_dim * 2, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d(decay=0.9, act=tf.nn.relu, gamma_init=gamma_init)(nn)
-    nn = DeConv2d(gf_dim, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d(decay=0.9, act=tf.nn.relu, gamma_init=gamma_init)(nn)
-    nn = DeConv2d(3, (5, 5), (2, 2), act=tf.nn.tanh, W_init=w_init)(nn)
+    def __init__(self):
+        super(Generator, self).__init__()
+        self.linear1 = Linear(out_features=self.gf_dim * 8 * self.s16 * self.s16,  W_init=self.w_init)
+        self.reshape = Reshape(shape=(-1, self.s16, self.s16, self.gf_dim * 8))
+        self.bn1 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
+        self.deconv2d1 = ConvTranspose2d(self.gf_dim * 4, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn2 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
+        self.deconv2d2 = ConvTranspose2d(self.gf_dim * 2, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn3 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
+        self.deconv2d3 = ConvTranspose2d(self.gf_dim, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn4 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
+        self.deconv2d4 = ConvTranspose2d(3, (5, 5), (2, 2), act=tlx.nn.ReLU, W_init=self.w_init)
 
-    return tl.models.Model(inputs=ni, outputs=nn, name='generator')
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.reshape(x)
+        x = self.bn1(x)
+        x = self.deconv2d1(x)
+        x = self.bn2(x)
+        x = self.deconv2d2(x)
+        x = self.bn3(x)
+        x = self.deconv2d3(x)
+        x = self.bn4(x)
+        x = self.deconv2d4(x)
 
-def get_discriminator(shape, df_dim=64): # Dimension of discrim filters in first conv layer. [64]
-    # w_init = tf.glorot_normal_initializer()
-    w_init = tf.random_normal_initializer(stddev=0.02)
-    gamma_init = tf.random_normal_initializer(1., 0.02)
-    lrelu = lambda x : tf.nn.leaky_relu(x, 0.2)
+        return x
 
-    ni = Input(shape)
-    nn = Conv2d(df_dim, (5, 5), (2, 2), act=lrelu, W_init=w_init)(ni)
-    nn = Conv2d(df_dim*2, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d(decay=0.9, act=lrelu, gamma_init=gamma_init)(nn)
-    nn = Conv2d(df_dim*4, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d(decay=0.9, act=lrelu, gamma_init=gamma_init)(nn)
-    nn = Conv2d(df_dim*8, (5, 5), (2, 2), W_init=w_init, b_init=None)(nn)
-    nn = BatchNorm2d(decay=0.9, act=lrelu, gamma_init=gamma_init)(nn)
-    nn = Flatten()(nn)
-    nn = Dense(n_units=1, act=tf.identity, W_init=w_init)(nn)
+class Discriminator(Module):
 
-    return tl.models.Model(inputs=ni, outputs=nn, name='discriminator')
+    df_dim = 64
+    w_init = tlx.nn.initializers.random_normal(stddev=0.02)
+    gamma_init = tlx.nn.initializers.random_normal(1., 0.02)
+
+    def __init__(self):
+        super(Discriminator, self).__init__()
+        self.conv1 = Conv2d(self.df_dim, (5, 5), (2, 2), act=tlx.nn.LeakyReLU, W_init=self.w_init)
+        self.conv2 = Conv2d(self.df_dim * 2, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn1 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.conv3 = Conv2d(self.df_dim * 4, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn2 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.conv4 = Conv2d(self.df_dim * 8, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
+        self.bn3 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.flatten = Flatten()
+        self.linear = Linear(1, W_init=self.w_init)
+
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.bn1(x)
+        x = self.conv3(x)
+        x = self.bn2(x)
+        x = self.conv4(x)
+        x = self.bn3(x)
+        x = self.flatten(x)
+        x = self.linear(x)
+
+        return x

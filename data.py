@@ -1,9 +1,9 @@
-import os
 import numpy as np
-import tensorflow as tf
-import tensorlayer as tl
+import tensorlayerx as tlx
+from tensorlayerx.dataflow import Dataset, DataLoader
+from tensorlayerx.vision import transforms, load_images
 ## enable debug logging
-tl.logging.set_verbosity(tl.logging.DEBUG)
+tlx.logging.set_verbosity(tlx.logging.DEBUG)
 
 class FLAGS(object):
     def __init__(self):
@@ -22,36 +22,37 @@ class FLAGS(object):
         assert np.sqrt(self.sample_size) % 1 == 0., 'Flag `sample_size` needs to be a perfect square'
 flags = FLAGS()
 
-tl.files.exists_or_mkdir(flags.checkpoint_dir) # save model
-tl.files.exists_or_mkdir(flags.sample_dir) # save generated image
+tlx.files.exists_or_mkdir(flags.checkpoint_dir) # save model
+tlx.files.exists_or_mkdir(flags.sample_dir) # save generated image
 
-def get_celebA(output_size, n_epoch, batch_size):
-    # dataset API and augmentation
-    images_path = tl.files.load_file_list(path='data', regx='.*.jpg', keep_prefix=True, printable=False)
-    def generator_train():
-        for image_path in images_path:
-            yield image_path.encode('utf-8')
-    def _map_fn(image_path):
-        image = tf.io.read_file(image_path)
-        image = tf.image.decode_jpeg(image, channels=3)  # get RGB with 0~1
-        image = tf.image.convert_image_dtype(image, dtype=tf.float32)
-        # image = tf.image.crop_central(image, [FLAGS.output_size, FLAGS.output_size, FLAGS.c_dim])
-        # image = tf.image.resize_images(image, FLAGS.output_size])
-        image = image[45:173, 25:153, :] # central crop
-        image = tf.image.resize([image], (output_size, output_size))[0]
-        # image = tf.image.crop_and_resize(image, boxes=[[]], crop_size=[64, 64])
-        # image = tf.image.resize_image_with_crop_or_pad(image, FLAGS.output_size, FLAGS.output_size) # central crop
-        image = tf.image.random_flip_left_right(image)
-        image = image * 2 - 1
+transforms_celebA = transforms.Compose(
+    [
+        transforms.CentralCrop(size = [128, 128]),
+        transforms.Resize(size=64),
+        transforms.RandomFlipHorizontal(),
+        transforms.Normalize(mean=(127.5), std=(127.5), data_format='HWC'),
+    ]
+)
+
+class CELEBA(Dataset):
+
+    def __init__(self):
+        images_path = r'data/celebA/img_align_celeba'
+        self.images = load_images(images_path, n_threads=0)
+
+    def __getitem__(self, idx):
+        image = self.images[idx]
+        image = transforms_celebA(image)
         return image
-    train_ds = tf.data.Dataset.from_generator(generator_train, output_types=tf.string)
-    ds = train_ds.shuffle(buffer_size=4096)
-    # ds = ds.shard(num_shards=hvd.size(), index=hvd.rank())
-    # ds = ds.repeat(n_epoch)
-    ds = ds.map(_map_fn, num_parallel_calls=4)
-    ds = ds.batch(batch_size)
-    ds = ds.prefetch(buffer_size=2)
-    return ds, images_path
-    # for batch_images in train_ds:
-    #     print(batch_images.shape)
-    # value = ds.make_one_shot_iterator().get_next()
+
+    def __len__(self):
+        return len(self.images)
+
+
+def get_celebA(batch_size):
+    # dataset API and augmentation
+    images_path = tlx.files.load_celebA_dataset()
+    celebA = CELEBA()
+    trainloader = DataLoader(celebA, batch_size=batch_size, shuffle=True, drop_last=True)
+    return trainloader, images_path
+
