@@ -1,8 +1,8 @@
-# DCGAN in TensorLayer
+# DCGAN in TensorLayerX
 
 🔥🔥🔥🔥🔥🔥**Now, we update this script under** [TensorLayerX](https://github.com/tensorlayer/TensorLayerX)! 
 
-TensorLayerX: A Unified Deep Learning and Reinforcement Learning Framework for All Hardwares, Backends and OS.
+TensorLayerX: A Unified Deep Learning and Reinforcement Learning Framework for All Hardwares, Backends and OS.X
 
 
 This is the TensorLayerX implementation of [Deep Convolutional Generative Adversarial Networks](http://arxiv.org/abs/1511.06434).
