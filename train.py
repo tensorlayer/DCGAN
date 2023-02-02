@@ -1,8 +1,8 @@
 import os
-os.environ['TL_BACKEND'] = 'tensorflow' # Just modify this line, easily switch to any framework!
+# os.environ['TL_BACKEND'] = 'tensorflow' # Just modify this line, easily switch to any framework!
 # os.environ['TL_BACKEND'] = 'mindspore'
 # os.environ['TL_BACKEND'] = 'paddle'
-# os.environ['TL_BACKEND'] = 'torch'
+os.environ['TL_BACKEND'] = 'torch'
 import time
 import numpy as np
 import tensorlayerx as tlx
@@ -70,8 +70,8 @@ def train():
             step_time = time.time()
             z = np.random.normal(loc=0.0, scale=1.0, size=[flags.batch_size, flags.z_dim]).astype(np.float32)
             z = tlx.ops.convert_to_tensor(z)
-            g_loss = trainforG(batch_images, z)
             d_loss = trainforD(batch_images, z)
+            g_loss = trainforG(batch_images, z)
 
             print("Epoch: [{}/{}] [{}/{}] took: {:.3f}, d_loss: {:.5f}, g_loss: {:.5f}".format(epoch, \
                   flags.n_epoch, step, n_step_epoch, time.time()-step_time, float(d_loss), float(g_loss)))
