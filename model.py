@@ -10,7 +10,7 @@ class Generator(Module):
 
     def __init__(self):
         super(Generator, self).__init__()
-        self.linear1 = Linear(out_features=self.gf_dim * 8 * self.s16 * self.s16,  W_init=self.w_init)
+        self.linear1 = Linear(out_features=self.gf_dim * 8 * self.s16 * self.s16,  W_init=self.w_init, b_init=None)
         self.reshape = Reshape(shape=(-1, self.s16, self.s16, self.gf_dim * 8))
         self.bn1 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
         self.deconv2d1 = ConvTranspose2d(self.gf_dim * 4, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
@@ -19,7 +19,7 @@ class Generator(Module):
         self.bn3 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
         self.deconv2d3 = ConvTranspose2d(self.gf_dim, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
         self.bn4 = BatchNorm2d(0.9, act=tlx.nn.ReLU, gamma_init=self.gamma_init)
-        self.deconv2d4 = ConvTranspose2d(3, (5, 5), (2, 2), act=tlx.nn.ReLU, W_init=self.w_init)
+        self.deconv2d4 = ConvTranspose2d(3, (5, 5), (2, 2), act=tlx.ops.tanh, W_init=self.w_init)
 
     def forward(self, x):
         x = self.linear1(x)
@@ -43,13 +43,13 @@ class Discriminator(Module):
 
     def __init__(self):
         super(Discriminator, self).__init__()
-        self.conv1 = Conv2d(self.df_dim, (5, 5), (2, 2), act=tlx.nn.LeakyReLU, W_init=self.w_init)
+        self.conv1 = Conv2d(self.df_dim, (5, 5), (2, 2), act=tlx.nn.LeakyReLU(0.2), W_init=self.w_init)
         self.conv2 = Conv2d(self.df_dim * 2, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
-        self.bn1 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.bn1 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU(0.2), gamma_init=self.gamma_init)
         self.conv3 = Conv2d(self.df_dim * 4, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
-        self.bn2 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.bn2 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU(0.2), gamma_init=self.gamma_init)
         self.conv4 = Conv2d(self.df_dim * 8, (5, 5), (2, 2), W_init=self.w_init, b_init=None)
-        self.bn3 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU, gamma_init=self.gamma_init)
+        self.bn3 = BatchNorm2d(0.9, act=tlx.nn.LeakyReLU(0.2), gamma_init=self.gamma_init)
         self.flatten = Flatten()
         self.linear = Linear(1, W_init=self.w_init)
 
@@ -64,5 +64,4 @@ class Discriminator(Module):
         x = self.bn3(x)
         x = self.flatten(x)
         x = self.linear(x)
-
         return x
