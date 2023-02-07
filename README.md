@@ -20,6 +20,12 @@ For earlier version, please check dcgan [release](https://github.com/tensorlayer
 🔥🔥🔥🔥🔥🔥 Please install TensorLayerX via source
 
 ```
+pip install tensorlayerx
+```
+
+or 
+
+```
 pip install git+https://github.com/tensorlayer/tensorlayerx.git 
 ```
 
