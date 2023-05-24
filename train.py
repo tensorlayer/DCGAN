@@ -84,5 +84,32 @@ def train():
             G.set_train()
             save_images(tlx.convert_to_numpy(result), [num_tiles, num_tiles], '{}/train_{:02d}.png'.format(flags.sample_dir, epoch))
 
+# To specify number of images to be generated 
+
+import tensorflow as tf
+num_examples_to_generate = "Input here no images to generate"
+noise_dim = "Input here your noise_dim"
+
+seed = tf.random.normal([num_examples_to_generate, noise_dim])
+
+def generate_and_save_images(model, epoch, test_input):
+  import matplotlib.pyplot as plt
+  # Notice `training` is set to False.
+  # This is so all layers run in inference mode (batchnorm).
+  
+  predictions = model(test_input, training=False)
+
+  fig = plt.figure(figsize=(4, 4))
+
+  for i in range(predictions.shape[0]):
+      plt.subplot(4, 4, i+1)
+      plt.imshow(predictions[i, :, :, 0] * 127.5 + 127.5, cmap='gray')
+      plt.axis('off')
+
+  plt.savefig('image_at_epoch_{:04d}.png'.format(epoch))
+  plt.show()
+
+models = generate_and_save_images(Generator(),"your epoch",seed)
+
 if __name__ == '__main__':
     train()
